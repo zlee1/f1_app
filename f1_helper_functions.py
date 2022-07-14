@@ -1,5 +1,4 @@
 import fastf1
-from calc_splines import calc_splines
 import matplotlib.pyplot as plt
 import numpy as np
 import os
