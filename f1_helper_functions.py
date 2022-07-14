@@ -1,4 +1,5 @@
 import fastf1
+from calc_splines import calc_splines
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -126,7 +127,111 @@ def get_driver_fastest_lap_telemetry(driver=1, session=None):
 
     return d.pick_fastest().get_telemetry()
 
+def get_all_telemetry(session=None):
+    """ Get the telemetry for all drivers and all laps in a session
 
+    Keyword Arguments:
+        session (fastf1.core.Session) - session to get telemetry from
+    """
+
+    if(session is None):
+        raise Exception("Must supply a session")
+
+    # Dictionary to store driver : telemetry pairs
+    telemetries = {}
+
+    # Loop through drivers and retrieve all of their telemetries
+    drivers = get_drivers_from_session(session)
+    for driver in drivers:
+        telemetries[driver] = session.laps.pick_driver(drivers.get(driver)).get_telemetry()
+
+    return telemetries
+
+def get_track_from_session(session=None):
+    """ Get the location of the track driven on during the session
+
+    Keyword Arguments:
+        session (fastf1.core.Session) - session to get track from
+    """
+
+    if(session is None):
+        raise Exception("Must supply a session")
+
+    return session.event.Location
+
+def get_track_from_event(event=None):
+    """ Get the location of the track driven on during the event
+
+    Keyword Arguments:
+        event (fastf1.events.Event) - event to get track from
+    """
+
+    if(event is None):
+        raise Exception("Must supply an event")
+
+    return event.Location
+
+def get_track_geospatial(trackname=None):
+    """ Get the geospatial data for the track from https://github.com/TUMFTM/racetrack-database
+
+    Keyword Arguments:
+        trackname (str) - name of the track
+    """
+    if(trackname is None):
+        raise Exception("Must supply track name")
+
+    return pd.read_csv(f"https://raw.githubusercontent.com/TUMFTM/racetrack-database/master/tracks/{trackname.replace(' ', '').title()}.csv")
+
+def get_track_edges(data=None):
+    """ Use helper function from https://github.com/TUMFTM/trajectory_planning_helpers to turn data into track edges.
+    Entire solution comes from TUMFTM and Alexander Heilmeier.
+
+    Keyword Arguments:
+        data (pd.DataFrame) - data containing middle line, right width, and left width of track
+    """
+
+    if(data is None):
+        raise Exception("Must supply data")
+
+    track_imp = np.array(data)
+    track_imp_cl = np.vstack((track_imp, track_imp[0]))
+    el_lengths_imp_cl = np.sqrt(np.sum(np.power(np.diff(track_imp_cl[:, :2], axis=0), 2), axis=1))
+
+    normvecs_normalized_imp = calc_splines(path=track_imp_cl[:, :2],
+                                            el_lengths=el_lengths_imp_cl,
+                                            use_dist_scaling=True)[3]
+    normvecs_normalized_imp_cl = np.vstack((normvecs_normalized_imp, normvecs_normalized_imp[0]))
+
+    # calculate boundaries
+    bound_right_imp_cl = track_imp_cl[:, :2] + normvecs_normalized_imp_cl * np.expand_dims(track_imp_cl[:, 2], 1)
+    bound_left_imp_cl = track_imp_cl[:, :2] - normvecs_normalized_imp_cl * np.expand_dims(track_imp_cl[:, 3], 1)
+
+    bounds = pd.DataFrame(np.concatenate((bound_left_imp_cl, bound_right_imp_cl), axis=1))
+    bounds.columns = ["outside_x", "outside_y", "inside_x", "inside_y"]
+
+    return bounds
+
+def get_elapsed_seconds(telemetry=None):
+    """ For each entry in telemetry, get the number of seconds since the first entry
+
+    Keyword Arguments:
+        telemetry (fastf1.core.Telemetry) - telemetry data
+    """
+
+    if(telemetry is None):
+        raise Exception("Must supply telemetry")
+
+    # Store initial time
+    init_time = telemetry.SessionTime.iloc[0]
+
+    seconds_from_start = []
+    # Calculate the number of seconds since initial time for each time
+    for time in telemetry.SessionTime:
+        seconds_from_start.append((time-init_time).total_seconds())
+
+    return seconds_from_start
+
+# Testing functions
 if __name__ == "__main__":
     cache()
     #display_schedule(get_schedule(2022))
@@ -135,4 +240,7 @@ if __name__ == "__main__":
     drivers = get_drivers_from_session(session)
     print(drivers)
     #print(get_driver_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session))
-    print(get_driver_fastest_lap_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session))
+    telem = get_driver_fastest_lap_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session)
+    telem["seconds_from_start"] = get_elapsed_seconds(telem)
+    print(telem)
+    #print(get_all_telemetry(session=session))
