@@ -231,6 +231,77 @@ def get_elapsed_seconds(telemetry=None):
 
     return seconds_from_start
 
+def get_telemetry_in_intervals(telemetry=None, interval=0.1):
+    """ Convert telemetry data to have points at specified intervals
+
+    Keyword Arguments:
+        telemetry (fastf1.core.Telemetry) - telemetry data
+        interval (float) - desired time in seconds between each datapoint
+    """
+
+    if(telemetry is None):
+        raise Exception("Must supply telemetry")
+
+    # Get elapsed seconds if not already provided
+    if("ElapsedSeconds" not in telemetry.columns):
+        telemetry["ElapsedSeconds"] = get_elapsed_seconds(telemetry)
+
+    telemetry.reset_index(drop=True, inplace=True)
+
+    # Get times separated by interval as list
+    intervals = np.arange(0, list(telemetry["ElapsedSeconds"])[-1], interval)
+
+    # Numeric columns
+    num_cols = ["X", "Y", "Throttle", "RPM", "Speed"]
+    # Categorical columns
+    cat_cols = ["Brake", "nGear", "Status"]
+
+    # Dictionary that contains all new columns
+    interval_telemetry = {key:[] for key in ["ElapsedSeconds"]+num_cols+cat_cols}
+
+    cur_index = 0
+    for interval in intervals:
+        # Iterate through the dataframe for each interval (with minimum index to reduce size)
+        for index, row in telemetry[cur_index:].iterrows():
+            if(row["ElapsedSeconds"] > interval):
+                # Handle numeric columns with weighted averaging
+                for col in num_cols:
+                    interval_telemetry[col] += [timing_weighted_average(
+                                                                       interval,
+                                                                       list(telemetry["ElapsedSeconds"])[index-1] if index != 0 else 0,
+                                                                       row["ElapsedSeconds"],
+                                                                       list(telemetry[col])[index-1],
+                                                                       row[col]
+                    )]
+                # Handle categorical columns by maintaining previous value
+                for col in cat_cols:
+                    interval_telemetry[col] += [list(telemetry[col])[index-1]]
+
+                # Update ElapsedSeconds and current index, then break because values were found
+                interval_telemetry["ElapsedSeconds"] += [interval]
+                cur_index = index
+                break
+
+    return pd.DataFrame(interval_telemetry).reset_index(drop=True)
+
+def timing_weighted_average(cur_time, old_time, new_time, old_val, new_val):
+    """ Calculate an average weighted based on the amount of time between current point and next
+
+    Keyword Arguments:
+        cur_time (float) - currently elapsed time
+        old_time (float) - elapsed time of previous point
+        new_time (float) - elapsed time of next point
+        old_val (float) - value at time of previous point
+        new_val (float) - value at time of next point
+    """
+
+    # Calculate difference between old/new times and current time
+    old_diff = cur_time-old_time
+    new_diff = new_time-cur_time
+
+    # Return the weighted average - assigning more weight to the closer time
+    return ((old_diff*new_val) + (new_diff*old_val))/((old_diff+new_diff))
+
 # Testing functions
 if __name__ == "__main__":
     cache()
@@ -241,6 +312,7 @@ if __name__ == "__main__":
     print(drivers)
     #print(get_driver_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session))
     telem = get_driver_fastest_lap_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session)
-    telem["seconds_from_start"] = get_elapsed_seconds(telem)
+    telem["ElapsedSeconds"] = get_elapsed_seconds(telem)
     print(telem)
     #print(get_all_telemetry(session=session))
+    print(get_telemetry_in_intervals(telem))

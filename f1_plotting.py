@@ -8,12 +8,12 @@ def proof_of_concept_plot():
     f1help.load_session_data(session)
     data = f1help.get_driver_fastest_lap_telemetry(driver=44, session=session)
 
-    data["elapsed_time"] = f1help.get_elapsed_seconds(data)
-    print(data.columns)
+    data["ElapsedTime"] = f1help.get_elapsed_seconds(data)
+    data = f1help.get_telemetry_in_intervals(data, 0.05)
+
     trackname = f1help.get_track_from_session(session)
     track = f1help.get_track_geospatial(trackname)
     bounds = f1help.get_track_edges(track)
-    print(bounds)
 
     data["X"] = (data["X"] - list(data["X"])[0]-150)/10
     data["Y"] = (data["Y"] - list(data["Y"])[0]-100)/10
@@ -73,7 +73,7 @@ def proof_of_concept_plot():
                                                             label="Play",
                                                             method="animate",
                                                             args=[None,
-                                                                  {"frame": {"duration":100, "redraw":False}}
+                                                                  {"frame": {"duration":50, "redraw":False}}
                                                                   ]
                                                        )
                                                    ]
@@ -86,24 +86,14 @@ def proof_of_concept_plot():
                                                   x=[data["X"].iloc[i]],
                                                   y=[data["Y"].iloc[i]],
                                                   mode="markers",
-                                                  marker=dict(size=[10],color=["rgba(255, 0, 0, .6)"])
+                                                  marker=dict(size=[10],color=[f"rgba({int(data['Brake'].iloc[i])*255}, {data['Throttle'].iloc[i]*2.55}, 0, .6)"])
                                            )
                                     ]
                     ) for i in range(len(data["X"]))]
 
           )
 
-    #fig.add_trace(go.Scatter(x=bounds["outside_x"], y=bounds["outside_y"], mode="lines", line_color="#222222", line_width=2, fill="toself", fillcolor="rgba(200,200,200,.5)"))
-    #fig.add_trace(go.Scatter(x=bounds["inside_x"], y=bounds["inside_y"], mode="lines", line_color="#222222", line_width=2, fill="toself", fillcolor="#ffffff"))
-    #fig.add_trace(go.Scatter(x=data["X"], y=data["Y"], mode="lines", line_width=2))
-
-    #fig.update_layout(template="simple_white")
-    #fig.update_layout(showlegend=False)
-    #fig.update_xaxes(visible=False)
-    #fig.update_yaxes(visible=False)
-
     fig.show()
-    #time.sleep(10)
 
 
 if __name__ == "__main__":
