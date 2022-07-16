@@ -231,25 +231,43 @@ def get_elapsed_seconds(telemetry=None):
 
     return seconds_from_start
 
-def get_telemetry_in_intervals(telemetry=None, interval=0.1):
+def get_telemetry_in_intervals(telemetry=None, interval=0.1, until=None, session=None):
     """ Convert telemetry data to have points at specified intervals
 
     Keyword Arguments:
         telemetry (fastf1.core.Telemetry) - telemetry data
         interval (float) - desired time in seconds between each datapoint
+        until (float or str) - end time in number of seconds from start or string describing end point ("data_end" or "session_end")
+        session (fastf1.core.Session) - session to get end time from (only needed if until is "session_end")
     """
 
     if(telemetry is None):
         raise Exception("Must supply telemetry")
 
+    if(until is None):
+        until = "data_end"
+
+    if(until == "session_end" and session is None):
+        raise Exception("Must supply session when until == \"session_end\"")
+
     # Get elapsed seconds if not already provided
     if("ElapsedSeconds" not in telemetry.columns):
         telemetry["ElapsedSeconds"] = get_elapsed_seconds(telemetry)
 
+    # Get end time based on until value
+    if(until == "data_end"):
+        end = list(telemetry["ElapsedSeconds"])[-1]
+    elif(until == "session_end"):
+        end = get_session_length(session)
+    elif(isinstance(until, float) or isinstance(until, int)):
+        end = until
+    else:
+        raise Exception("Invalid value specified for until")
+
     telemetry.reset_index(drop=True, inplace=True)
 
     # Get times separated by interval as list
-    intervals = np.arange(0, list(telemetry["ElapsedSeconds"])[-1], interval)
+    intervals = np.arange(0, end, interval)
 
     # Numeric columns
     num_cols = ["X", "Y", "Throttle", "RPM", "Speed"]
@@ -282,6 +300,12 @@ def get_telemetry_in_intervals(telemetry=None, interval=0.1):
                 cur_index = index
                 break
 
+            # If the end of the data has been reached, continue apppending the most recent data
+            elif(cur_index == telemetry.index[-1] and interval < until):
+                for col in num_cols+cat_cols:
+                    interval_telemetry[col] = row[col]
+                interval_telemetry["ElapsedSeconds"] += [interval]
+
     return pd.DataFrame(interval_telemetry).reset_index(drop=True)
 
 def timing_weighted_average(cur_time, old_time, new_time, old_val, new_val):
@@ -301,6 +325,28 @@ def timing_weighted_average(cur_time, old_time, new_time, old_val, new_val):
 
     # Return the weighted average - assigning more weight to the closer time
     return ((old_diff*new_val) + (new_diff*old_val))/((old_diff+new_diff))
+
+def get_overall_fastest(session=None):
+    """ Get the fastest lap from the session
+
+    Keyword Arguments:
+        session (fastf1.core.Session) - session to get fastest lap from
+    """
+    if(session is None):
+        raise Exception("Must supply a session")
+
+    return session.laps.pick_fastest()
+
+def get_session_length(session=None):
+    """ Get the total amount of time that the session took to complete
+
+    Keyword Arguments:
+        session (fastf1.core.Session) - session to get time from
+    """
+    if(session is None):
+        raise Exception("Must supply a session")
+
+    return session.results.Time.total_seconds()
 
 # Testing functions
 if __name__ == "__main__":

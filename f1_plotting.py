@@ -6,6 +6,7 @@ def proof_of_concept_plot():
     f1help.cache()
     session = f1help.get_session_from_event(f1help.get_event(2022, 11), "Race")
     f1help.load_session_data(session)
+    
     data = f1help.get_driver_fastest_lap_telemetry(driver=44, session=session)
 
     data["ElapsedTime"] = f1help.get_elapsed_seconds(data)
@@ -17,6 +18,22 @@ def proof_of_concept_plot():
 
     data["X"] = (data["X"] - list(data["X"])[0]-150)/10
     data["Y"] = (data["Y"] - list(data["Y"])[0]-100)/10
+
+    fastest_lap = f1help.get_overall_fastest(session)
+
+    drivers = f1help.get_drivers_from_session(session)
+
+    driver_data = f1help.get_all_telemetry(session)
+    """
+    for driver in list(driver_data.keys())[:1]:
+        print(driver)
+        d = driver_data.get(driver)
+        d = f1help.get_telemetry_in_intervals(d, 0.1, until="data_end", session=session)
+        print(d)
+        d["X"] = (d["X"]-list(fastest_lap["X"])[0] - 150)/10
+        d["Y"] = (d["Y"]-list(fastest_lap["Y"])[0] - 150)/10
+        print(f"{driver} done")
+    print(driver_data.get(list(driver_data.keys())[0]).head(20))"""
 
     fig = go.Figure(
                     data=[
