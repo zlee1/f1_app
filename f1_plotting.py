@@ -6,34 +6,40 @@ def proof_of_concept_plot():
     f1help.cache()
     session = f1help.get_session_from_event(f1help.get_event(2022, 11), "Race")
     f1help.load_session_data(session)
-    
-    data = f1help.get_driver_fastest_lap_telemetry(driver=44, session=session)
+
+    """data = f1help.get_driver_fastest_lap_telemetry(driver=44, session=session)
 
     data["ElapsedTime"] = f1help.get_elapsed_seconds(data)
-    data = f1help.get_telemetry_in_intervals(data, 0.05)
+    data = f1help.get_telemetry_in_intervals(data, 0.05)"""
 
     trackname = f1help.get_track_from_session(session)
     track = f1help.get_track_geospatial(trackname)
     bounds = f1help.get_track_edges(track)
 
-    data["X"] = (data["X"] - list(data["X"])[0]-150)/10
-    data["Y"] = (data["Y"] - list(data["Y"])[0]-100)/10
+    """data["X"] = (data["X"] - list(data["X"])[0]-150)/10
+    data["Y"] = (data["Y"] - list(data["Y"])[0]-100)/10"""
 
     fastest_lap = f1help.get_overall_fastest(session)
 
     drivers = f1help.get_drivers_from_session(session)
 
     driver_data = f1help.get_all_telemetry(session)
-    """
+
+    for driver, d in driver_data.items():
+        print(d.Date.iloc[0])
+
     for driver in list(driver_data.keys())[:1]:
         print(driver)
         d = driver_data.get(driver)
-        d = f1help.get_telemetry_in_intervals(d, 0.1, until="data_end", session=session)
+        print(d)
+        d = f1help.get_telemetry_in_intervals(d, 0.1, until="data_end")
         print(d)
         d["X"] = (d["X"]-list(fastest_lap["X"])[0] - 150)/10
         d["Y"] = (d["Y"]-list(fastest_lap["Y"])[0] - 150)/10
         print(f"{driver} done")
-    print(driver_data.get(list(driver_data.keys())[0]).head(20))"""
+        driver_data[driver] = d
+    print(driver_data.get(list(driver_data.keys())[0]).head(20))
+    data = driver_data.get(list(driver_data.keys())[0])
 
     fig = go.Figure(
                     data=[
@@ -90,7 +96,8 @@ def proof_of_concept_plot():
                                                             label="Play",
                                                             method="animate",
                                                             args=[None,
-                                                                  {"frame": {"duration":50, "redraw":False}}
+                                                                  {"frame": {"duration":100, "redraw":False},
+                                                                   "transition": {"duration":100, "easing":"linear"}}
                                                                   ]
                                                        )
                                                    ]
@@ -103,7 +110,7 @@ def proof_of_concept_plot():
                                                   x=[data["X"].iloc[i]],
                                                   y=[data["Y"].iloc[i]],
                                                   mode="markers",
-                                                  marker=dict(size=[10],color=[f"rgba({int(data['Brake'].iloc[i])*255}, {data['Throttle'].iloc[i]*2.55}, 0, .6)"])
+                                                  marker=dict(size=[10], color=["rgba(0, 0, 0, .7)"])#,color=[f"rgba({int(data['Brake'].iloc[i])*255}, {data['Throttle'].iloc[i]*2.55}, 0, .6)"])
                                            )
                                     ]
                     ) for i in range(len(data["X"]))]

@@ -270,26 +270,28 @@ def get_telemetry_in_intervals(telemetry=None, interval=0.1, until=None, session
     intervals = np.arange(0, end, interval)
 
     # Numeric columns
-    num_cols = ["X", "Y", "Throttle", "RPM", "Speed"]
+    num_cols = ["X", "Y"]#, "Throttle", "RPM", "Speed"]
     # Categorical columns
-    cat_cols = ["Brake", "nGear", "Status"]
+    cat_cols = []#"Brake", "nGear", "Status"]
 
     # Dictionary that contains all new columns
     interval_telemetry = {key:[] for key in ["ElapsedSeconds"]+num_cols+cat_cols}
 
     cur_index = 0
     for interval in intervals:
+        if(interval % 5 == 0):
+            print((interval/end)*100)
         # Iterate through the dataframe for each interval (with minimum index to reduce size)
-        for index, row in telemetry[cur_index:].iterrows():
-            if(row["ElapsedSeconds"] > interval):
+        for index in telemetry[cur_index:].index:
+            if(telemetry.iloc[index]["ElapsedSeconds"] > interval):
                 # Handle numeric columns with weighted averaging
                 for col in num_cols:
                     interval_telemetry[col] += [timing_weighted_average(
                                                                        interval,
                                                                        list(telemetry["ElapsedSeconds"])[index-1] if index != 0 else 0,
-                                                                       row["ElapsedSeconds"],
+                                                                       telemetry.iloc[index]["ElapsedSeconds"],
                                                                        list(telemetry[col])[index-1],
-                                                                       row[col]
+                                                                       telemetry.iloc[index][col]
                     )]
                 # Handle categorical columns by maintaining previous value
                 for col in cat_cols:
@@ -303,7 +305,7 @@ def get_telemetry_in_intervals(telemetry=None, interval=0.1, until=None, session
             # If the end of the data has been reached, continue apppending the most recent data
             elif(cur_index == telemetry.index[-1] and interval < until):
                 for col in num_cols+cat_cols:
-                    interval_telemetry[col] = row[col]
+                    interval_telemetry[col] = telemetry.iloc[index][col]
                 interval_telemetry["ElapsedSeconds"] += [interval]
 
     return pd.DataFrame(interval_telemetry).reset_index(drop=True)
@@ -335,7 +337,7 @@ def get_overall_fastest(session=None):
     if(session is None):
         raise Exception("Must supply a session")
 
-    return session.laps.pick_fastest()
+    return session.laps.pick_fastest().get_telemetry()
 
 def get_session_length(session=None):
     """ Get the total amount of time that the session took to complete
@@ -360,5 +362,6 @@ if __name__ == "__main__":
     telem = get_driver_fastest_lap_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session)
     telem["ElapsedSeconds"] = get_elapsed_seconds(telem)
     print(telem)
+    print(get_overall_fastest(session))
     #print(get_all_telemetry(session=session))
     print(get_telemetry_in_intervals(telem))
