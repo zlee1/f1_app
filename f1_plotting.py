@@ -1,6 +1,8 @@
 import f1_helper_functions as f1help
 import plotly.graph_objects as go
 import time
+import pickle as pkl
+import os
 
 def proof_of_concept_plot():
     f1help.cache()
@@ -16,42 +18,52 @@ def proof_of_concept_plot():
     track = f1help.get_track_geospatial(trackname)
     bounds = f1help.get_track_edges(track)
 
+    div_x, div_y, diff_x, diff_y = f1help.get_track_fit_values(trackname)
+    print(div_x, div_y, diff_x, diff_y)
+
     """data["X"] = (data["X"] - list(data["X"])[0]-150)/10
     data["Y"] = (data["Y"] - list(data["Y"])[0]-100)/10"""
 
     fastest_lap = f1help.get_overall_fastest(session)
 
     drivers = f1help.get_drivers_from_session(session)
+    driver_data = None
+    interval = .2
+    # Load Data
+    if("data.pkl" in os.listdir()):
+        with open("data.pkl", "rb") as f:
+            driver_data = pkl.load(f)
+    else:
+        driver_data = f1help.get_all_telemetry(session)
 
-    driver_data = f1help.get_all_telemetry(session)
+        for driver in driver_data:
+            print(driver)
+            d = driver_data.get(driver)
+            d = f1help.get_telemetry_in_intervals(d, interval, until="session_end", session=session)
+            d["X"] = (d["X"]/div_x) + diff_x
+            d["Y"] = (d["Y"]/div_y) + diff_y
+            print(f"{driver} done")
+            driver_data[driver] = d
 
-    for driver, d in driver_data.items():
-        print(d.Date.iloc[0])
 
-    for driver in list(driver_data.keys())[:1]:
-        print(driver)
-        d = driver_data.get(driver)
-        print(d)
-        d = f1help.get_telemetry_in_intervals(d, 0.1, until="data_end")
-        print(d)
-        d["X"] = (d["X"]-list(fastest_lap["X"])[0] - 150)/10
-        d["Y"] = (d["Y"]-list(fastest_lap["Y"])[0] - 150)/10
-        print(f"{driver} done")
-        driver_data[driver] = d
-    print(driver_data.get(list(driver_data.keys())[0]).head(20))
+        # Save Data
+        with open("data.pkl", "wb+") as f:
+            pkl.dump(driver_data, f)
+
     data = driver_data.get(list(driver_data.keys())[0])
 
+    print(driver_data)
+
     fig = go.Figure(
-                    data=[
-                          go.Scatter(
-                                     x=bounds["outside_x"],
-                                     y=bounds["outside_y"],
-                                     mode="lines",
-                                     line_color="rgba(85, 85, 85, 0)",
-                                     line_width=2,
-                                     #fill="toself",
-                                     #fillcolor="rgba(170,170,170,.5)"
-                          ),
+                    data=[go.Scatter(
+                               x=bounds["outside_x"],
+                               y=bounds["outside_y"],
+                               mode="lines",
+                               line_color="rgba(85, 85, 85, 0)",
+                               line_width=2,
+                               #fill="toself",
+                               #fillcolor="rgba(170,170,170,.5)"
+                    ) for i in driver_data] + [
                           go.Scatter(
                                      x=bounds["outside_x"],
                                      y=bounds["outside_y"],
@@ -71,8 +83,8 @@ def proof_of_concept_plot():
                                      #fillcolor="#ffffff"
                           ),
                           go.Scatter(
-                                     x=[data["X"].iloc[0]],
-                                     y=[data["Y"].iloc[0]],
+                                     x=[0],
+                                     y=[0],
                                      mode="markers",
                                      visible=False
                           )
@@ -96,8 +108,8 @@ def proof_of_concept_plot():
                                                             label="Play",
                                                             method="animate",
                                                             args=[None,
-                                                                  {"frame": {"duration":100, "redraw":False},
-                                                                   "transition": {"duration":100, "easing":"linear"}}
+                                                                  {"frame": {"duration":interval*1000, "redraw":False},
+                                                                   "transition": {"duration":interval*1000, "easing":"linear"}}
                                                                   ]
                                                        )
                                                    ]
@@ -107,11 +119,13 @@ def proof_of_concept_plot():
                     frames=[go.Frame(
                                      data=[
                                            go.Scatter(
-                                                  x=[data["X"].iloc[i]],
-                                                  y=[data["Y"].iloc[i]],
+                                                  x=[d["X"].iloc[i]],
+                                                  y=[d["Y"].iloc[i]],
+                                                  text=driver,
+                                                  hoverinfo = "text",
                                                   mode="markers",
-                                                  marker=dict(size=[10], color=["rgba(0, 0, 0, .7)"])#,color=[f"rgba({int(data['Brake'].iloc[i])*255}, {data['Throttle'].iloc[i]*2.55}, 0, .6)"])
-                                           )
+                                                  marker=dict(size=[10], color=f1help.get_driver_color(driver))#,color=[f"rgba({int(data['Brake'].iloc[i])*255}, {data['Throttle'].iloc[i]*2.55}, 0, .6)"])
+                                           ) for driver, d in driver_data.items()
                                     ]
                     ) for i in range(len(data["X"]))]
 

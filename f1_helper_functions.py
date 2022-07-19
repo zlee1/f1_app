@@ -1,4 +1,5 @@
 import fastf1
+import fastf1.plotting
 from calc_splines import calc_splines
 import matplotlib.pyplot as plt
 import numpy as np
@@ -279,7 +280,7 @@ def get_telemetry_in_intervals(telemetry=None, interval=0.1, until=None, session
 
     cur_index = 0
     for interval in intervals:
-        if(interval % 5 == 0):
+        if(interval % 50 == 0):
             print((interval/end)*100)
         # Iterate through the dataframe for each interval (with minimum index to reduce size)
         for index in telemetry[cur_index:].index:
@@ -303,10 +304,11 @@ def get_telemetry_in_intervals(telemetry=None, interval=0.1, until=None, session
                 break
 
             # If the end of the data has been reached, continue apppending the most recent data
-            elif(cur_index == telemetry.index[-1] and interval < until):
+            elif(all(float(k) < interval for k in list(telemetry["ElapsedSeconds"].iloc[cur_index:])) and interval < end):
                 for col in num_cols+cat_cols:
-                    interval_telemetry[col] = telemetry.iloc[index][col]
+                    interval_telemetry[col] += [telemetry.iloc[index][col]]
                 interval_telemetry["ElapsedSeconds"] += [interval]
+                break
 
     return pd.DataFrame(interval_telemetry).reset_index(drop=True)
 
@@ -348,7 +350,37 @@ def get_session_length(session=None):
     if(session is None):
         raise Exception("Must supply a session")
 
-    return session.results.Time.total_seconds()
+    return session.results.Time.iloc[0].total_seconds()
+
+def get_driver_color(name=None):
+    """ Get the driver color as a hex code
+
+    Keyword Arguments:
+        name (str) - name of the driver
+    """
+
+    if(name is None):
+        raise Exception("Must supply driver name")
+
+    return fastf1.plotting.driver_color(name)
+
+def get_track_fit_values(track_name):
+    """ Returns values used to fit car positional data to track bound data.
+    Returned as (div_x, div_y, diff_x, diff_y)
+    Where div variables are the value to divide the column by and diff variables
+    are the values to add to the column. Divide first, then add.
+
+    Keyword Arguments:
+        track_name (str) - name of the track to fit the data to
+    """
+    # Values must be manually calculated and added to dictionary because of
+    # unpredictability in track layout and driver behavior
+    fit_dict = {
+                "spielberg":(10.05, 10.05, -130, 115),
+                "catalunya":(10.05, 10.05, -90, 30)
+    }
+
+    return fit_dict.get(track_name.lower())
 
 # Testing functions
 if __name__ == "__main__":
@@ -356,12 +388,17 @@ if __name__ == "__main__":
     #display_schedule(get_schedule(2022))
     session = get_session_from_event(event=get_event(2022, 11))
     load_session_data(session)
-    drivers = get_drivers_from_session(session)
-    print(drivers)
+    #print(get_session_length(session))
+    #drivers = get_drivers_from_session(session)
+    #print(drivers)
+    #print(get_driver_color(list(drivers.keys())[0]))
     #print(get_driver_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session))
-    telem = get_driver_fastest_lap_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session)
-    telem["ElapsedSeconds"] = get_elapsed_seconds(telem)
-    print(telem)
-    print(get_overall_fastest(session))
+    #telem = get_driver_fastest_lap_telemetry(driver=drivers.get(list(drivers.keys())[0]), session=session)
+    #telem["ElapsedSeconds"] = get_elapsed_seconds(telem)
+    #print(telem)
+    #print(get_overall_fastest(session))
     #print(get_all_telemetry(session=session))
-    print(get_telemetry_in_intervals(telem))
+    #print(get_telemetry_in_intervals(telem))
+    sainz = get_driver_telemetry(driver=55, session=session)
+    print(sainz)
+    print(get_telemetry_in_intervals(sainz, interval=0.5, until="session_end", session=session).tail(20))
