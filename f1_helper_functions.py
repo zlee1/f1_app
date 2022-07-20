@@ -364,6 +364,22 @@ def get_driver_color(name=None):
 
     return fastf1.plotting.driver_color(name)
 
+def get_team_color(name=None, session=None):
+    """ Get the driver's team color as a hex code
+
+    Keyword Arguments:
+        name (str) - name of the driver
+        session (fastf1.core.Session) - session to get color from
+    """
+
+    if(name is None):
+        raise Exception("Must supply driver name")
+
+    if(session is None):
+        raise Exception("Must supply a session")
+
+    return "#" + session.results[session.results["FullName"] == name]["TeamColor"].iloc[0]
+
 def get_track_fit_values(track_name):
     """ Returns values used to fit car positional data to track bound data.
     Returned as (div_x, div_y, diff_x, diff_y)
@@ -399,6 +415,7 @@ if __name__ == "__main__":
     #print(get_overall_fastest(session))
     #print(get_all_telemetry(session=session))
     #print(get_telemetry_in_intervals(telem))
-    sainz = get_driver_telemetry(driver=55, session=session)
-    print(sainz)
-    print(get_telemetry_in_intervals(sainz, interval=0.5, until="session_end", session=session).tail(20))
+    print(get_team_color("Carlos Sainz", session=session))
+    #sainz = get_driver_telemetry(driver=55, session=session)
+    #print(sainz)
+    #print(get_telemetry_in_intervals(sainz, interval=0.5, until="session_end", session=session).tail(20))

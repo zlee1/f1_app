@@ -54,6 +54,9 @@ def proof_of_concept_plot():
 
     print(driver_data)
 
+    driver_team_colors = {driver: f1help.get_team_color(driver, session) for driver in driver_data}
+    print(driver_team_colors)
+
     fig = go.Figure(
                     data=[go.Scatter(
                                x=bounds["outside_x"],
@@ -124,7 +127,7 @@ def proof_of_concept_plot():
                                                   text=driver,
                                                   hoverinfo = "text",
                                                   mode="markers",
-                                                  marker=dict(size=[10], color=f1help.get_driver_color(driver))#,color=[f"rgba({int(data['Brake'].iloc[i])*255}, {data['Throttle'].iloc[i]*2.55}, 0, .6)"])
+                                                  marker=dict(size=[10], color=driver_team_colors.get(driver))#,color=[f"rgba({int(data['Brake'].iloc[i])*255}, {data['Throttle'].iloc[i]*2.55}, 0, .6)"])
                                            ) for driver, d in driver_data.items()
                                     ]
                     ) for i in range(len(data["X"]))]
