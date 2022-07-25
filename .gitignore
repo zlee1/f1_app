@@ -1,4 +1,4 @@
 cache/
 __pycache__/
 backups/
-data.pkl
+*.pkl

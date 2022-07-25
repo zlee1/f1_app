@@ -6,7 +6,10 @@ import os
 
 def proof_of_concept_plot():
     f1help.cache()
-    session = f1help.get_session_from_event(f1help.get_event(2022, 11), "Race")
+    year=2022
+    gp=10
+    event="Race"
+    session = f1help.get_session_from_event(f1help.get_event(year, gp), event)
     f1help.load_session_data(session)
 
     """data = f1help.get_driver_fastest_lap_telemetry(driver=44, session=session)
@@ -15,11 +18,16 @@ def proof_of_concept_plot():
     data = f1help.get_telemetry_in_intervals(data, 0.05)"""
 
     trackname = f1help.get_track_from_session(session)
-    track = f1help.get_track_geospatial(trackname)
-    bounds = f1help.get_track_edges(track)
+    """track = f1help.get_track_geospatial(trackname)
+    bounds = f1help.get_track_edges(track)"""
 
-    div_x, div_y, diff_x, diff_y = f1help.get_track_fit_values(trackname)
-    print(div_x, div_y, diff_x, diff_y)
+
+    """div_x, div_y, diff_x, diff_y = f1help.get_track_fit_values(trackname)
+    print(div_x, div_y, diff_x, diff_y)"""
+    div_x = 1
+    div_y = 1
+    diff_x = 0
+    diff_y = 0
 
     """data["X"] = (data["X"] - list(data["X"])[0]-150)/10
     data["Y"] = (data["Y"] - list(data["Y"])[0]-100)/10"""
@@ -29,9 +37,11 @@ def proof_of_concept_plot():
     drivers = f1help.get_drivers_from_session(session)
     driver_data = None
     interval = .2
+
+    data_filepath=f"{year}_{gp}_{event}.pkl"
     # Load Data
-    if("data.pkl" in os.listdir()):
-        with open("data.pkl", "rb") as f:
+    if(data_filepath in os.listdir()):
+        with open(data_filepath, "rb") as f:
             driver_data = pkl.load(f)
     else:
         driver_data = f1help.get_all_telemetry(session)
@@ -47,7 +57,7 @@ def proof_of_concept_plot():
 
 
         # Save Data
-        with open("data.pkl", "wb+") as f:
+        with open(data_filepath, "wb+") as f:
             pkl.dump(driver_data, f)
 
     data = driver_data.get(list(driver_data.keys())[0])
@@ -59,31 +69,40 @@ def proof_of_concept_plot():
 
     fig = go.Figure(
                     data=[go.Scatter(
-                               x=bounds["outside_x"],
-                               y=bounds["outside_y"],
+                               x=fastest_lap["X"],
+                               y=fastest_lap["Y"],
                                mode="lines",
                                line_color="rgba(85, 85, 85, 0)",
-                               line_width=2,
+                               line_width=6,
                                #fill="toself",
                                #fillcolor="rgba(170,170,170,.5)"
                     ) for i in driver_data] + [
-                          go.Scatter(
-                                     x=bounds["outside_x"],
-                                     y=bounds["outside_y"],
-                                     mode="lines",
-                                     line_color="rgba(85, 85, 85, .6)",
-                                     line_width=2,
+                          #go.Scatter(
+                            #         x=bounds["outside_x"],
+                            #         y=bounds["outside_y"],
+                            #         mode="lines",
+                            #         line_color="rgba(85, 85, 85, .6)",
+                            #         line_width=2,
                                      #fill="toself",
                                      #fillcolor="rgba(170,170,170,.5)"
-                          ),
-                          go.Scatter(
-                                     x=bounds["inside_x"],
-                                     y=bounds["inside_y"],
-                                     mode="lines",
-                                     line_color="rgba(85, 85, 85, .6)",
-                                     line_width=2,
+                          #),
+                          #go.Scatter(
+                            #         x=bounds["inside_x"],
+                            #         y=bounds["inside_y"],
+                            #         mode="lines",
+                            #         line_color="rgba(85, 85, 85, .6)",
+                            #         line_width=2,
                                      #fill="toself",
                                      #fillcolor="#ffffff"
+                          #),
+                          go.Scatter(
+                                     x=fastest_lap["X"],
+                                     y=fastest_lap["Y"],
+                                     mode="lines",
+                                     line_color="rgba(85, 85, 85, .6)",
+                                     line_width=4,
+                                     #fill="toself",
+                                     #fillcolor="rgba(170,170,170,.5)"
                           ),
                           go.Scatter(
                                      x=[0],
@@ -97,6 +116,7 @@ def proof_of_concept_plot():
                                      width=1350,
                                      template="simple_white",
                                      showlegend=False,
+                                     margin={"r":10, "t":10, "l":10, "b":10},
                                      xaxis={
                                             "visible":False
                                      },
@@ -127,7 +147,7 @@ def proof_of_concept_plot():
                                                   text=driver,
                                                   hoverinfo = "text",
                                                   mode="markers",
-                                                  marker=dict(size=[10], color=driver_team_colors.get(driver))#,color=[f"rgba({int(data['Brake'].iloc[i])*255}, {data['Throttle'].iloc[i]*2.55}, 0, .6)"])
+                                                  marker=dict(size=[15], color=[driver_team_colors.get(driver)])
                                            ) for driver, d in driver_data.items()
                                     ]
                     ) for i in range(len(data["X"]))]
@@ -135,6 +155,7 @@ def proof_of_concept_plot():
           )
 
     fig.show()
+    fig.write_html(f"html_races/{year}_{gp}_{event}.html")
 
 
 if __name__ == "__main__":
