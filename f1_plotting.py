@@ -7,7 +7,7 @@ import os
 def proof_of_concept_plot():
     f1help.cache()
     year=2022
-    gp=10
+    gp=9
     event="Race"
     session = f1help.get_session_from_event(f1help.get_event(year, gp), event)
     f1help.load_session_data(session)
@@ -38,7 +38,7 @@ def proof_of_concept_plot():
     driver_data = None
     interval = .2
 
-    data_filepath=f"{year}_{gp}_{event}.pkl"
+    data_filepath=f"race_data/{year}_{gp}_{event}.pkl"
     # Load Data
     if(data_filepath in os.listdir()):
         with open(data_filepath, "rb") as f:
@@ -50,8 +50,7 @@ def proof_of_concept_plot():
             print(driver)
             d = driver_data.get(driver)
             d = f1help.get_telemetry_in_intervals(d, interval, until="session_end", session=session)
-            d["X"] = (d["X"]/div_x) + diff_x
-            d["Y"] = (d["Y"]/div_y) + diff_y
+            d["MarkerColor"].fillna(f1help.get_team_color(driver, session), inplace=True)
             print(f"{driver} done")
             driver_data[driver] = d
 
@@ -74,6 +73,7 @@ def proof_of_concept_plot():
                                mode="lines",
                                line_color="rgba(85, 85, 85, 0)",
                                line_width=6,
+                               hoverinfo="skip",
                                #fill="toself",
                                #fillcolor="rgba(170,170,170,.5)"
                     ) for i in driver_data] + [
@@ -101,6 +101,7 @@ def proof_of_concept_plot():
                                      mode="lines",
                                      line_color="rgba(85, 85, 85, .6)",
                                      line_width=4,
+                                     hoverinfo="skip"
                                      #fill="toself",
                                      #fillcolor="rgba(170,170,170,.5)"
                           ),
@@ -108,6 +109,7 @@ def proof_of_concept_plot():
                                      x=[0],
                                      y=[0],
                                      mode="markers",
+                                     hoverinfo="skip",
                                      visible=False
                           )
                     ],
@@ -147,7 +149,7 @@ def proof_of_concept_plot():
                                                   text=driver,
                                                   hoverinfo = "text",
                                                   mode="markers",
-                                                  marker=dict(size=[15], color=[driver_team_colors.get(driver)])
+                                                  marker=dict(size=[15], color=[d["MarkerColor"].iloc[i]])
                                            ) for driver, d in driver_data.items()
                                     ]
                     ) for i in range(len(data["X"]))]

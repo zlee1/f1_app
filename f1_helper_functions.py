@@ -276,7 +276,7 @@ def get_telemetry_in_intervals(telemetry=None, interval=0.1, until=None, session
     cat_cols = []#"Brake", "nGear", "Status"]
 
     # Dictionary that contains all new columns
-    interval_telemetry = {key:[] for key in ["ElapsedSeconds"]+num_cols+cat_cols}
+    interval_telemetry = {key:[] for key in ["ElapsedSeconds", "MarkerColor"]+num_cols+cat_cols}
 
     cur_index = 0
     for interval in intervals:
@@ -300,6 +300,7 @@ def get_telemetry_in_intervals(telemetry=None, interval=0.1, until=None, session
 
                 # Update ElapsedSeconds and current index, then break because values were found
                 interval_telemetry["ElapsedSeconds"] += [interval]
+                interval_telemetry["MarkerColor"] += [None]
                 cur_index = index
                 break
 
@@ -308,6 +309,7 @@ def get_telemetry_in_intervals(telemetry=None, interval=0.1, until=None, session
                 for col in num_cols+cat_cols:
                     interval_telemetry[col] += [telemetry.iloc[index][col]]
                 interval_telemetry["ElapsedSeconds"] += [interval]
+                interval_telemetry["MarkerColor"] += ['rgba(0, 0, 0, .2)']
                 break
 
     return pd.DataFrame(interval_telemetry).reset_index(drop=True)
