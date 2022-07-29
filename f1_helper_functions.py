@@ -175,6 +175,8 @@ def get_track_from_event(event=None):
 def get_track_geospatial(trackname=None):
     """ Get the geospatial data for the track from https://github.com/TUMFTM/racetrack-database
 
+    Function no longer in use
+
     Keyword Arguments:
         trackname (str) - name of the track
     """
@@ -186,6 +188,8 @@ def get_track_geospatial(trackname=None):
 def get_track_edges(data=None):
     """ Use helper function from https://github.com/TUMFTM/trajectory_planning_helpers to turn data into track edges.
     Entire solution comes from TUMFTM and Alexander Heilmeier.
+
+    Function no longer in use.
 
     Keyword Arguments:
         data (pd.DataFrame) - data containing middle line, right width, and left width of track
